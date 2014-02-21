@@ -1,0 +1,68 @@
+`r opts_chunk$set(cache=TRUE, fig.width=10)`
+<link href="http://joey711.github.com/phyloseq/markdown.css" rel="stylesheet"></link>
+
+
+# A minimal example of rarefying
+
+In order to provide the statistical framework for the variance stabilizing transformations performed in this paper, we provide a simple example. When comparing two different samples called `A` and `B` for which we have 100 and 1000 reads respectively. Suppose there are only two types of taxa present,  `OTU1` and `OTU2`, according to the following contingency table:
+
+```{r define-table}
+tab2 <- structure(c(62, 38, 500, 500), .Dim = c(2L, 2L), .Dimnames = list(c("OTU1", "OTU2"), c("A", "B")))
+tab2
+```
+
+Suppose now that we performed a rarefying procedure, which transforms the counts in sample `B` so that their sum is now the same as sample `A`. Further assume that our rarefying procedure perfectly reflects the original proportions. In practice it won't (see section on **Rarefying introduces additional sampling noise** below).
+
+```{r pretend-rarefy}
+tab2r <- matrix(c(62, 38, 50, 50), 2, 2, dimnames=list(c("OTU1", "OTU2"), c("A", "B")))
+tab2r
+```
+
+Testing the two proportions according to a standard test is done either using a $\chi^2$ test or a Fisher exact test. Here are the results of both tests, for both the original and "rarefied" data.
+
+```{r test-table-original}
+chisq.test(tab2)
+fisher.test(tab2)
+chisq.test(tab2r)
+fisher.test(tab2r)
+```
+
+Here is how to store the results of each test in a matrix.
+
+```{r store-test-results-table}
+chi0 = chisq.test(tab2)
+fis0 = fisher.test(tab2)
+chir = chisq.test(tab2r)
+fisr = fisher.test(tab2r)
+pvals = c(chi0$p.value, chir$p.value, fis0$p.value, fisr$p.value)
+Ptab = matrix(round(pvals, 4), 2, 2, dimnames=list(c("original", "rarefied"), c("Chi-Squared", "Fisher")))
+Ptab
+```
+
+And here is how to translate that matrix into LaTeX table format:
+
+```{r Pvalues-xtable}
+library("xtable")
+xtable(Ptab, digits=4)
+```
+
+Regardless of the formatting, you can see from this table that the rarefied version of the data is no longer able to differentiate between the two samples. This is a loss of power induced solely by decreasing the sample size, which in-turn increases the confidence intervals corresponding to each proportion.
+
+## Rarefying introduces additional sampling noise
+
+The simplest way to show this from our minimal example above is to repeat the rarefying procedure many times, rather than assume (as we did above) that the resulting proportions after rarefying will take their expected value. In practice, rarefying is a random procedure that is usually not repeated. There is no reason to expect that the proportions that resulted from rarefying will exactly match the originals, even in our simplest-case example of a community consisting of just two species in a 50/50 proportion. 
+
+```{r rarefying-added-noise}
+# The number of times to repeat rarefying.
+nreplicates = 100
+rarefied = matrix(NA_integer_, nrow=nreplicates, ncol=2, dimnames=list(1:100, c("OTU1", "OTU2")))
+for(i in 1:nreplicates){
+  rarefied[i, ] <- table(sample(c(rep(1, 500), rep(2, 500)), 100, replace=FALSE))  
+}
+hist(rarefied[, "OTU1"])
+hist(rarefied[, "OTU2"])
+```
+
+Of course, the average of many repeated rarefying steps approaches the original proportions. However, as you can see in the histogram, there were many trials in which the result of rarefying deviated substantially from the original proportion, and this impacts our statistical inference downstream. Effectively this is added noise that we are artificially adding to the count values.
+
+
