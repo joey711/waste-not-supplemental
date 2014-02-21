@@ -1,8 +1,17 @@
-################################################################################
-#
-# Sample Clustering, Mixing
-#
-################################################################################
+`r opts_chunk$set(cache=FALSE, fig.width=10, message=FALSE, warning=FALSE)`
+<link href="http://joey711.github.com/phyloseq/markdown.css" rel="stylesheet"></link>
+
+# Simulations Design, Tiny Demo Code
+
+The following two examples are the exact code used to create the values used in the simplified overview of the two simulation types in the article. As you can see, even these simplified examples are based on real data, and are fully reproducible.
+
+---
+
+## Sample Clustering Simulations Example
+
+### Define templates from real microbiomes
+
+```{r}
 set.seed(20140206)
 library("phyloseq")
 data("GlobalPatterns")
@@ -14,26 +23,35 @@ FecesTop = names(sort(taxa_sums(FecesReal), decreasing=TRUE)[1:3])
 BothOF = subset_samples(GlobalPatterns, SampleType %in% c("Ocean", "Feces"))
 BothOF = prune_taxa(c(FecesTop, OceanTop), BothOF)
 BothOF = as(otu_table(BothOF), "matrix")[, c(sample_names(OceanReal), sample_names(FecesReal))]
+BothOF
 # Divide by 1000, for example simplicity
 BothOF = floor(BothOF/1000)
+BothOF
 OceanVec = rowSums(BothOF[, sample_names(OceanReal)])
 OceanVec = matrix(OceanVec, nrow=length(OceanVec), dimnames=list(names(OceanVec)))
+OceanVec
 FecesVec = rowSums(BothOF[, sample_names(FecesReal)])
 FecesVec = matrix(FecesVec, nrow=length(FecesVec), dimnames=list(names(FecesVec)))
+FecesVec
 # Write the example table and the example multinomial
 write.csv(BothOF,   file="sim_cluster_ocean_feces_otu_matrix.csv", col.names=FALSE, row.names=FALSE)
 write.csv(OceanVec, file="ocean-multinomial.csv", col.names=FALSE, row.names=FALSE)
 write.csv(FecesVec, file="feces-multinomial.csv", col.names=FALSE, row.names=FALSE)
-# Defined artificial mixing.
-# Mix each multinomial by adding total/EffectSize counts from the other.
-# Create mixed multinomial by adding counts from the other in precise proportion,
-# a total of Library Size / Effect Size
+```
+
+### Deterministic mixing
+
+Mix each multinomial by adding total/EffectSize counts from the other. Create mixed multinomial by adding counts from the other in precise proportion, a total of `Library Size / Effect Size`.
+
+```{r determinisitic-mixing}
 EffectSize = 10
 addToOcean = round(sum(OceanVec) * FecesVec / (sum(FecesVec) * EffectSize), 0)
 addToFeces = round(sum(FecesVec) * OceanVec / (sum(OceanVec) * EffectSize), 0)
 # Add them together to create "dirty" multinomial
 dirtyOcean = addToOcean + OceanVec
+dirtyOcean
 dirtyFeces = addToFeces + FecesVec
+dirtyFeces
 # Write the dirty multinomials
 write.csv(dirtyOcean, file="dirty-ocean-multinomial.csv", col.names=FALSE, row.names=FALSE)
 write.csv(dirtyFeces, file="dirty-feces-multinomial.csv", col.names=FALSE, row.names=FALSE)
@@ -54,30 +72,38 @@ OceanSim[is.na(OceanSim)] <- 0L
 FecesSim[is.na(FecesSim)] <- 0L
 # Write simulated table
 write.csv(cbind(OceanSim, FecesSim), file="cluster_ocean_feces-ex-sim.csv", col.names=FALSE, row.names=FALSE)
-################################################################################
-#
-# Differential Abundance
-#
-################################################################################
+```
+
+
+---
+
+## Differential Abundance Simulations Example
+
+```{r diff-abund}
+# Reset package and data call, for modularity and protection
 library("phyloseq")
 data("GlobalPatterns")
 SkinReal = subset_samples(GlobalPatterns, SampleType=="Skin")
 SkinTop = names(sort(taxa_sums(SkinReal), decreasing=TRUE)[1:6])
 SkinMat = round(as(otu_table(prune_taxa(SkinTop, SkinReal)), "matrix")/1000, 0)
+SkinMat
 # Write to csv
 write.csv(SkinMat, file="sim_diff_abund_matrix_ex_real_matrix.csv", col.names=FALSE, row.names=FALSE)
 # Create the rowsum version (multinomial)
 SkinMatRS = matrix(rowSums(SkinMat), nrow=nrow(SkinMat), dimnames=list(rownames(SkinMat)))
+SkinMatRS
 write.csv(SkinMatRS, file="sim_diff_abund_matrix_ex_real_matrix_RS.csv", col.names=FALSE, row.names=FALSE)
 # Simulate by sampling from multinomial
 # Example of "simulated" count matrix with 4 columns/samples each class
 J = 4
 NL = sample(round(sample_sums(GlobalPatterns)/10000, 0), size=J*2, replace=TRUE)
+NL
 # Simulate Test and NULL
 nullmat = sapply(NL, function(NL, SkinMatRS){
   table(sample(rownames(SkinMatRS), NL, replace=TRUE, prob=SkinMatRS))[rownames(SkinMatRS)]
 }, SkinMatRS)
 nullmat[is.na(nullmat)] <- 0L
+nullmat
 write.csv(nullmat, file="sim_diff_abund_matrix_before_effect.csv", col.names=FALSE, row.names=FALSE)
 # Apply "effect" to random (arbitrary in this case) rows
 testmat = nullmat
@@ -85,5 +111,7 @@ EffectSize = 10
 effectrows = c(1, 4)
 effectcols = 1:J
 testmat[effectrows, effectcols] <- EffectSize * testmat[effectrows, effectcols]
+testmat
 # write to csv
 write.csv(testmat,  file="sim_diff_abund_matrix_after_effect.csv", col.names=FALSE, row.names=FALSE)
+```
