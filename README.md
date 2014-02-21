@@ -3,7 +3,8 @@
 
 This repo hosts the supplemental source/output files corresponding to **Protocol 1** of the following article.
 
-### McMurdie and Holmes (2014) Waste Not, Want Not: Why Rarefying Microbiome Data is Inadmissible. *PLoS Computational Biology - in press*
+### McMurdie and Holmes (2014) Waste Not, Want Not: Why Rarefying Microbiome Data is Inadmissible. *PLoS Computational Biology*
+(in press)
 
 If you find this supplemental useful, or the extensions linked below, please make sure to cite the above article.
 
